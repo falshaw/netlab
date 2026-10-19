@@ -1,0 +1,31 @@
+# OSPF refresher — same 3-router triangle, but YOU configure OSPF.
+# Interfaces + loopbacks are pre-set; there is NO routing protocol yet.
+# Deploy:   cd ospf-lab && sudo containerlab deploy
+# Enter r1: sudo docker exec -it clab-ospf-lab-r1 vtysh
+# Destroy:  sudo containerlab destroy
+name: ospf-lab
+
+topology:
+  kinds:
+    linux:
+      image: frrouting/frr:latest
+  nodes:
+    r1:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r1.conf:/etc/frr/frr.conf
+    r2:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r2.conf:/etc/frr/frr.conf
+    r3:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r3.conf:/etc/frr/frr.conf
+  links:
+    - endpoints: ["r1:eth1", "r2:eth1"]   # 10.0.12.0/30
+    - endpoints: ["r1:eth2", "r3:eth1"]   # 10.0.13.0/30
+    - endpoints: ["r2:eth2", "r3:eth2"]   # 10.0.23.0/30

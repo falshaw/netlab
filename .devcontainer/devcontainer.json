@@ -1,0 +1,21 @@
+{
+  "name": "netlab — containerlab + FRR",
+  "image": "ghcr.io/srl-labs/containerlab/devcontainer-dind-slim:0.68.0",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "srl-labs.vscode-containerlab",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "postCreateCommand": "containerlab version && docker pull frrouting/frr:latest && docker pull ghcr.io/srl-labs/network-multitool:latest && echo '' && echo 'READY. Start Day 1:  cd day1-bgp && sudo containerlab deploy' && echo ''"
+}

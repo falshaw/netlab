@@ -1,0 +1,30 @@
+# day2 - Anycast + multihoming - EMPTY CANVAS (wiring + IPs done, NO routing protocol yet)
+# Deploy:  cd day2 && sudo containerlab deploy
+# Enter:   sudo docker exec -it clab-day2-r1 vtysh
+# Destroy: sudo containerlab destroy
+name: day2
+
+topology:
+  kinds:
+    linux:
+      image: frrouting/frr:latest
+  nodes:
+    r1:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r1.conf:/etc/frr/frr.conf
+    r2:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r2.conf:/etc/frr/frr.conf
+    r3:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r3.conf:/etc/frr/frr.conf
+  links:
+    - endpoints: ["r1:eth1", "r2:eth1"]   # 10.0.12.0/30
+    - endpoints: ["r1:eth2", "r3:eth1"]   # 10.0.13.0/30
+    - endpoints: ["r2:eth2", "r3:eth2"]   # 10.0.23.0/30

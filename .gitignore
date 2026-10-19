@@ -1,0 +1,22 @@
+# containerlab runtime artifacts
+clab-*/
+.clab.yml.bak
+*.bak
+__pycache__/
+
+# draw.io temp/lock files
+.$*.dtmp
+*.dtmp
+*.bkp
+.$*.bkp
+
+# general
+node_modules/
+.next/
+dist/
+out/
+coverage/
+*.log
+.env
+.env.*
+!.env.example

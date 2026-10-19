@@ -1,0 +1,71 @@
+# day2-te - BGP MULTIHOMING & TRAFFIC ENGINEERING
+# YOU build AS 65000 (r1 + r2). The two ISPs (r3, r4) come up working automatically.
+#
+# Deploy:  sudo containerlab deploy -t day2-te/day2-te.clab.yml
+# Enter:   sudo docker exec -it clab-day2-te-r1 vtysh
+# Reset:   sudo containerlab destroy -t day2-te/day2-te.clab.yml --cleanup   (NEVER docker restart)
+#
+#   AS 65100 (ISP-A)  r3                       AS 65200 (ISP-B)  r4
+#   adv 8.8.8.0/24, 100.64.0.0/24              adv 8.8.8.0/24, 203.0.113.0/24
+#        | 10.0.13.0/30 eBGP                        | 10.0.24.0/30 eBGP
+#   r1 (1.1.1.1) ----- iBGP 10.0.12.0/30 ----- r2 (2.2.2.2)   [AS 65000 = YOURS]
+#                  we originate 192.0.2.0/24
+#
+# 8.8.8.0/24 is advertised by BOTH ISPs -> two paths -> you choose (TE). See NOTES.md.
+#
+# Same proven pattern as day1b: exec sets interface IPs in the kernel (after the veths
+# exist, so no race) and pushes config via vtysh. NO frr restart (that kills PID 1).
+name: day2-te
+
+topology:
+  kinds:
+    linux:
+      image: frrouting/frr:latest
+  nodes:
+    # ===== AS 65000 = YOUR network (BGP is EMPTY - you build it) =====
+    r1:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r1.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 10.0.13.1/30 dev eth1
+        - ip link set eth1 up
+        - ip addr add 10.0.12.1/30 dev eth2
+        - ip link set eth2 up
+        - vtysh -c "conf t" -c "ip route 192.0.2.0/24 Null0" -c "router bgp 65000" -c "bgp router-id 1.1.1.1" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.13.2 remote-as 65100" -c "neighbor 10.0.12.2 remote-as 65000" -c "neighbor 10.0.12.2 next-hop-self" -c "network 192.0.2.0/24"
+    r2:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r2.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 10.0.24.1/30 dev eth1
+        - ip link set eth1 up
+        - ip addr add 10.0.12.2/30 dev eth2
+        - ip link set eth2 up
+        - vtysh -c "conf t" -c "ip route 192.0.2.0/24 Null0" -c "router bgp 65000" -c "bgp router-id 2.2.2.2" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.24.2 remote-as 65200" -c "neighbor 10.0.12.1 remote-as 65000" -c "neighbor 10.0.12.1 next-hop-self" -c "network 192.0.2.0/24"
+    # ===== ISP-A (AS 65100) = comes up working automatically =====
+    r3:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r3.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 10.0.13.2/30 dev eth1
+        - ip link set eth1 up
+        - vtysh -c "conf t" -c "ip route 8.8.8.0/24 Null0" -c "ip route 100.64.0.0/24 Null0" -c "router bgp 65100" -c "bgp router-id 3.3.3.3" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.13.1 remote-as 65000" -c "network 8.8.8.0/24" -c "network 100.64.0.0/24"
+    # ===== ISP-B (AS 65200) = comes up working automatically =====
+    r4:
+      kind: linux
+      binds:
+        - ../common/daemons:/etc/frr/daemons
+        - r4.conf:/etc/frr/frr.conf
+      exec:
+        - ip addr add 10.0.24.2/30 dev eth1
+        - ip link set eth1 up
+        - vtysh -c "conf t" -c "ip route 8.8.8.0/24 Null0" -c "ip route 203.0.113.0/24 Null0" -c "router bgp 65200" -c "bgp router-id 4.4.4.4" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.24.1 remote-as 65000" -c "network 8.8.8.0/24" -c "network 203.0.113.0/24"
+  links:
+    - endpoints: ["r1:eth1", "r3:eth1"]   # 10.0.13.0/30  eBGP  AS65000 <-> ISP-A
+    - endpoints: ["r2:eth1", "r4:eth1"]   # 10.0.24.0/30  eBGP  AS65000 <-> ISP-B
+    - endpoints: ["r1:eth2", "r2:eth2"]   # 10.0.12.0/30  iBGP  inside AS65000

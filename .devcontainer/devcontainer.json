@@ -1,6 +1,6 @@
 {
   "name": "netlab — containerlab + FRR",
-  "image": "ghcr.io/srl-labs/containerlab/devcontainer-dind-slim:0.68.0",
+  "image": "ghcr.io/srl-labs/containerlab/devcontainer-dind-slim:0.79.0",
   "hostRequirements": {
     "cpus": 4,
     "memory": "8gb",

@@ -71,7 +71,11 @@ The FRR image is pinned. The official FRR images are published on `quay.io/frrou
 
 ## Running locally (optional)
 
-Requires Linux or WSL2 with Docker, containerlab (`bash -c "$(curl -sL https://get.containerlab.dev)"`) and `sudo`. Then deploy any lab folder as above.
+The devcontainer is built for **GitHub Codespaces**. It runs Docker-in-Docker as a privileged container, and containerlab then creates veth links and network namespaces inside it. On a Codespaces VM that is harmless. On **Docker Desktop (Windows/macOS)** a privileged containerlab-in-Docker setup shares Docker Desktop's single utility VM and can take down that VM's networking, which stops every other container on the machine until Docker Desktop is restarted. Do not open this devcontainer locally on Docker Desktop.
+
+To run the labs locally, use a native Linux host or a WSL2 distro with its own Docker Engine (not Docker Desktop), install containerlab (`bash -c "$(curl -sL https://get.containerlab.dev)"`) and deploy any lab folder with `sudo containerlab deploy` as above.
+
+On Windows, clone with the repository's `.gitattributes` in effect (any recent Git does this). It forces LF line endings; a CRLF copy of `common/daemons` or an `rN.conf` breaks FRR inside the container (`$'': command not found`).
 
 ## License
 

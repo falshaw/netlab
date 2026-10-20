@@ -1,0 +1,10 @@
+# Force LF everywhere. FRR reads common/daemons and rN.conf inside Linux
+# containers; a Windows CRLF checkout breaks them ($'\r': command not found).
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

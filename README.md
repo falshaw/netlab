@@ -10,7 +10,7 @@ Vendor router images (IOS-XR, Junos) need nested virtualisation, licences and a 
 
 ## How it works
 
-- `.devcontainer/devcontainer.json` uses the containerlab docker-in-docker devcontainer image (4 CPU / 8 GB), installs the containerlab VS Code extension and pre-pulls `frrouting/frr` and `ghcr.io/srl-labs/network-multitool`.
+- `.devcontainer/devcontainer.json` uses the containerlab docker-in-docker devcontainer image (4 CPU / 8 GB), installs the containerlab VS Code extension and pre-pulls `quay.io/frrouting/frr:10.7.1` and `ghcr.io/srl-labs/network-multitool`.
 - Each lab folder holds a `*.clab.yml` topology, one `rN.conf` FRR config per router and a `.drawio` diagram.
 - `common/daemons` is mounted into every node as `/etc/frr/daemons` (enables bgpd, ospfd, ospf6d, isisd, ldpd, bfdd).
 
@@ -59,8 +59,10 @@ Labs with a `NOTES.md` (`day1`, `day1b`, `day2-te`) contain step-by-step tasks a
 
 | Image | Role |
 |---|---|
-| `frrouting/frr:latest` | the routers (BGP/OSPF/IS-IS/MPLS/SR/BFD) |
+| `quay.io/frrouting/frr:10.7.1` | the routers (BGP/OSPF/IS-IS/MPLS/SR/BFD) |
 | `ghcr.io/srl-labs/network-multitool` | Linux host for ping/curl tests |
+
+The FRR image is pinned. The official FRR images are published on `quay.io/frrouting/frr`; the Docker Hub `frrouting/frr:latest` tag stopped at 8.4 (2022). The `frr version` line in every `rN.conf` matches the pinned tag. To move to a newer release, change the tag in every `*.clab.yml` and in `.devcontainer/devcontainer.json`.
 
 ## Limitations
 

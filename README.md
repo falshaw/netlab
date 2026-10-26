@@ -1,5 +1,7 @@
 # netlab — zero-setup network lab (containerlab + FRR)
 
+[![labs](https://github.com/falshaw/netlab/actions/workflows/labs.yml/badge.svg)](https://github.com/falshaw/netlab/actions/workflows/labs.yml)
+
 A hands-on routing lab for learning BGP, OSPF, IS-IS, MPLS, DDoS edge defence and resilience. It runs in **GitHub Codespaces**: nothing to install locally, no VMs, no nested virtualisation. You open a Codespace and you are typing real router commands.
 
 The routers are **FRRouting (FRR)** containers — free, open source, with a Cisco-like CLI (`router bgp`, `show ip bgp`, `show ip route`). No licensed images are needed.

@@ -1,10 +1,10 @@
 # EDGE DEFENCE CHEAT SHEET — CDN / WAF / DDoS
 
 ## What this is & why it matters
-This is the "front door" of a public, always-on online platform. A high-traffic real-time service is a permanent
-DDoS target (event-day traffic spikes + extortion attacks), is globally distributed (latency = lost users), and is
-often regulated. So the edge stack — **CDN** (speed + absorb), **WAF** (app-layer attacks), **DDoS scrubbing**
-(volumetric) — is where an edge network engineer earns their money. This sheet is concept + the routing/BGP
+This is the "front door" of a regulated, high-traffic web platform. Such a service is a permanent DDoS target
+(peak-event traffic spikes + extortion attacks) and is globally distributed (latency = lost users). So the edge
+stack — **CDN** (speed + absorb), **WAF** (app-layer attacks), **DDoS scrubbing** (volumetric) — is where most
+of the edge network engineering happens. This sheet is concept + the routing/BGP
 mechanics behind it.
 
 ---
@@ -17,7 +17,7 @@ mechanics behind it.
 - **Caching:** TTLs, cache-control headers, origin shield, cache-key design; static vs dynamic (ESI, dynamic acceleration).
 - **TLS termination** at the edge; **origin pull** vs push.
 - Vendors: Cloudflare, Akamai, Fastly, CloudFront.
-> Soundbite: *"CDNs use BGP anycast plus DNS GSLB to pull users to the nearest PoP — that's both the latency optimisation and the first tier of DDoS absorption, because attack traffic is spread across every PoP instead of hitting one origin."*
+> **Summary:** CDNs use BGP anycast plus DNS GSLB to pull users to the nearest PoP — that's both the latency optimisation and the first tier of DDoS absorption, because attack traffic is spread across every PoP instead of hitting one origin.
 
 ## 2. WAF (Web Application Firewall) — L7 application defence
 - **What:** inspects **HTTP/HTTPS** for app-layer attacks the network firewall can't see.
@@ -25,7 +25,7 @@ mechanics behind it.
 - **Models:** **negative** (signatures/blocklist — OWASP CRS) + **positive** (allowlist/learned schema). Plus **rate-limiting**, **bot management**, **geo-blocking**, **virtual patching** (block an exploit before the app is patched).
 - **Deploy:** reverse-proxy / cloud (Cloudflare, AWS WAF, F5 ASM, Imperva, ModSecurity+CRS).
 - **Tuning:** start in **detection/log mode** → baseline → move to **block**; manage false positives per rule.
-> Soundbite: *"A WAF is L7 — it sees the HTTP payload, so it stops SQLi/XSS/bot abuse and lets me virtual-patch a vuln before the devs ship a fix. I run new rules in detection mode first to bound false positives, then enforce."*
+> **Summary:** a WAF is L7 — it sees the HTTP payload, so it stops SQLi/XSS/bot abuse and can virtual-patch a vuln before the developers ship a fix. Run new rules in detection mode first to bound false positives, then enforce.
 
 ## 3. DDoS mitigation
 ### Attack types
@@ -42,11 +42,11 @@ mechanics behind it.
 - **SYN cookies / connection limits / first-packet drop** for state attacks.
 - **Anycast** spreads volumetric load across PoPs automatically.
 
-### Trade-off to state out loud
+### The trade-off
 - **RTBH = you complete the DoS for one IP** (drop all its traffic) to protect the rest — blunt but instant.
 - **Scrubbing = surgical** (filters bad, keeps good) but costs and adds a slight detour.
-> Soundbite: *"Layered: anycast + CDN absorb and spread, cloud scrubbing handles volumetric via BGP diversion and GRE return, FlowSpec pushes surgical L3/L4 filters fleet-wide, and RTBH is the last-resort blackhole when saving the platform means sacrificing one target IP. uRPF and SYN cookies handle spoofing and state exhaustion."*
+> **Summary:** layered — anycast + CDN absorb and spread, cloud scrubbing handles volumetric via BGP diversion and GRE return, FlowSpec pushes surgical L3/L4 filters fleet-wide, and RTBH is the last-resort blackhole when saving the platform means sacrificing one target IP. uRPF and SYN cookies handle spoofing and state exhaustion.
 
-## 4. Putting it together for a real-time platform (whiteboard answer)
+## 4. Putting it together: a reference edge design
 User → **Anycast CDN PoP** (TLS, cache, absorb) → **WAF** (L7/OWASP/bot) → **DDoS scrubbing** (volumetric/state) →
 origin behind a firewall, with **RTBH + FlowSpec** ready at the border and **monitoring/alerting** (NetFlow/sFlow → detection) feeding it. Tie to non-functionals: telemetry, runbooks, on-call.

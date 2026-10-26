@@ -21,13 +21,13 @@
 ### Call flow (one breath)
 `INVITE → 100 Trying → 180 Ringing → 200 OK → ACK` … RTP media flows … `BYE → 200 OK`.
 
-### Network-engineer angle (what THEY care about)
+### Network-engineer angle
 - **NAT traversal** is the classic pain (SDP carries private IPs) → **SBC**, STUN/TURN/ICE, or ALG.
 - **Security:** SIP over **TLS (5061)** + **SRTP** for media; SBC for topology hiding, DoS protection, toll-fraud.
 - **QoS:** mark signaling CS3, voice media **EF (DSCP 46)** → LLQ.
 - **Troubleshoot:** SIP ladder diagram (`sngrep`/Wireshark), one-way audio = RTP/NAT/firewall, 401/407 = auth, 488 = codec mismatch.
 
-> Honest-ramp: *"I understand SIP as the call-control layer — INVITE/180/200/ACK/BYE, SDP for media negotiation, RTP/SRTP carrying the actual voice, and SBCs at the edge for NAT, security and interworking. My depth is the network side — transport, TLS/SRTP, QoS marking, NAT traversal — not carrier voice-app engineering."*
+> **Summary:** SIP is the call-control layer — INVITE/180/200/ACK/BYE, SDP for media negotiation, RTP/SRTP carrying the actual voice, and SBCs at the edge for NAT, security and interworking. The network side is transport, TLS/SRTP, QoS marking and NAT traversal.
 
 ---
 
@@ -49,9 +49,9 @@
 - **SIGTRAN runs on SCTP** (multi-homed, multi-streamed — know SCTP exists and why: resilience for signaling).
 - **Security:** SS7 has weak native auth → **SS7 firewalls / GTT screening / Diameter Edge Agents** at interconnect borders. A classic network-security topic.
 
-> Honest-ramp: *"SS7 is the out-of-band PSTN/mobile signaling network — MTP/SCCP/TCAP with ISUP for trunks and MAP for mobile/roaming/SMS — now carried over IP via SIGTRAN (M3UA over SCTP), and being replaced by Diameter in LTE and HTTP/2 service-based interfaces in 5G. I know it from the security and IP-transport angle — SCTP, SIGTRAN, and SS7/Diameter signaling firewalls — rather than as a carrier voice engineer."*
+> **Summary:** SS7 is the out-of-band PSTN/mobile signaling network — MTP/SCCP/TCAP with ISUP for trunks and MAP for mobile/roaming/SMS — now carried over IP via SIGTRAN (M3UA over SCTP), and being replaced by Diameter in LTE and HTTP/2 service-based interfaces in 5G. The network-engineer angle is SCTP, SIGTRAN and SS7/Diameter signaling firewalls.
 
 ---
 
-## One-line cheat for the panel
-*"SIP = modern IP call control (text, HTTP-like, media over RTP, secured with TLS/SRTP and SBCs). SS7 = legacy out-of-band telco signaling (ISUP/MAP) now over IP via SIGTRAN/SCTP, succeeded by Diameter and 5G HTTP/2. My strength is the transport, security and QoS around them, not carrier voice-app internals."*
+## One-line summary
+SIP = modern IP call control (text, HTTP-like, media over RTP, secured with TLS/SRTP and SBCs). SS7 = legacy out-of-band telco signaling (ISUP/MAP) now over IP via SIGTRAN/SCTP, succeeded by Diameter and 5G HTTP/2. For a network engineer the focus is the transport, security and QoS around them.

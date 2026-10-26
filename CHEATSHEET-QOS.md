@@ -2,13 +2,13 @@
 
 ## What this is & why it matters
 QoS (Quality of Service) decides **which traffic wins when a link is congested**. On a real-time platform, live
-price feeds, trading and voice are latency/jitter-sensitive — they must be prioritised over bulk/replication
+updates, interactive sessions and voice are latency/jitter-sensitive — they must be prioritised over bulk/replication
 traffic, especially across the WAN edge. Know the pipeline (classify → mark → queue → police/shape → drop), the
 DSCP values, and the police-vs-shape distinction cold.
 
 > Enterprise/SP QoS = classify → mark → queue → drop/shape.
 
-## 0. The model (say this)
+## 0. The model
 **Classify** traffic → **mark** it (so everyone trusts the mark) → **queue/schedule** at congestion points →
 **police/shape** to rates → **drop intelligently** before tail-drop. You only need QoS where there's contention (WAN edge, uplinks).
 
@@ -20,7 +20,7 @@ DSCP values, and the police-vs-shape distinction cold.
 | MPLS | **EXP/TC** | 3 bits in the label |
 
 **Key DSCP names:** `EF` (46) = voice; `CS6/CS7` (48/56) = network control; `AF4x` (34/36/38) = video/interactive;
-`AF3x/AF2x/AF1x` = business tiers; `BE/default` (0) = best-effort/scavenger. **PHB** = per-hop behaviour the mark triggers.
+`AF3x/AF2x/AF1x` = business tiers; `BE/default` (0) = best-effort; `CS1` (8) = scavenger (less than best-effort). **PHB** = per-hop behaviour the mark triggers.
 - **EF** → low-latency priority queue. **AF** = 4 classes × 3 drop precedences (AF*1* low drop, AF*3* high drop). **CS** = class selector (legacy IP-precedence compatible).
 
 ## 2. Mechanisms (know what each does)
@@ -64,8 +64,8 @@ Shape example: `shape average 50000000`.
 - Map DSCP → MPLS **EXP** at ingress PE; core queues on EXP (3 bits = 8 classes).
 - **Uniform vs Pipe vs Short-pipe** tunnelling models = how DSCP/EXP is copied in/out of the MPLS domain.
 
-## 5. Soundbites
-- *"Mark at the trust boundary, trust in the core. EF gets a strict-priority LLQ for voice, AF classes get CBWFQ with WRED, everything else is best-effort."*
-- *"Policing drops or re-marks and adds no delay; shaping buffers and smooths — so I police inbound/ingress and shape outbound toward a slower circuit."*
-- *"WRED prevents TCP global synchronisation by dropping selectively before the queue tail-drops."*
-- *"Latency-sensitive flows (live price feeds, trading) map to EF/AF4; bulk/replication to scavenger."*
+## 5. Key points
+- Mark at the trust boundary, trust in the core. EF gets a strict-priority LLQ for voice, AF classes get CBWFQ with WRED, everything else is best-effort.
+- Policing drops or re-marks and adds no delay; shaping buffers and smooths — so police inbound/ingress and shape outbound toward a slower circuit.
+- WRED prevents TCP global synchronisation by dropping selectively before the queue tail-drops.
+- Latency-sensitive flows (live updates, interactive sessions) map to EF/AF4; bulk/replication to scavenger (CS1).

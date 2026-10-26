@@ -11,7 +11,7 @@ BGP best-path selection and why iBGP needs next-hop-self are the two things to k
 
 ---
 
-## 0. The one thing they WILL ask: best-path algorithm (in order)
+## 0. Best-path algorithm (in order) — learn this first
 **Weight → Local-Pref → Locally-originated → AS-path (shortest) → Origin (IGP<EGP<?) → MED (lowest) → eBGP>iBGP → lowest IGP metric to next-hop → oldest eBGP → lowest router-id → lowest neighbor IP**
 
 Mnemonic: **W**eight **L**ocal **O**riginate **A**S **O**rigin **M**ED e**B**GP **I**GP **R**outer-id.
@@ -30,9 +30,15 @@ router bgp 65000
  neighbor 10.0.13.2 remote-as 65100   ! eBGP (different AS)
  neighbor 10.0.12.2 remote-as 65000   ! iBGP (same AS)
  neighbor 10.0.12.2 next-hop-self     ! iBGP: rewrite next-hop to me, else 'inaccessible'
- neighbor 10.0.12.2 update-source lo  ! peer off loopback (resilient, needs IGP)
- neighbor 2.2.2.2 description R2-iBGP
  network 192.0.2.0/24                 ! advertise a prefix you have a route for (needs matching RIB/Null0 route)
+```
+iBGP on loopbacks (resilient: survives a single link failure; needs an IGP that carries both loopbacks):
+```
+router bgp 65000
+ neighbor 2.2.2.2 remote-as 65000     ! iBGP peer = r2's loopback, not a link address
+ neighbor 2.2.2.2 update-source lo    ! source the session from MY loopback (1.1.1.1)
+ neighbor 2.2.2.2 next-hop-self
+ neighbor 2.2.2.2 description R2-iBGP
 ```
 Peer-group / template (scale):
 ```
@@ -83,7 +89,7 @@ Other inbound levers: **MED** (`set metric 50` out — same-AS only), **communit
 
 ## 5. Communities (tag once, act anywhere) — the SP self-service TE menu
 ```
- neighbor 10.0.13.2 send-community            ! MUST enable to send them
+ neighbor 10.0.13.2 send-community            ! FRR: on by default for every peer  [IOS: must be enabled]
 !
 bgp community-list standard CUST permit 65100:120
 route-map FROM_ISPA permit 5
@@ -132,13 +138,18 @@ Alternative: **confederations** (split AS into sub-ASNs). Know both exist; RR is
 ```
 ip route 198.51.100.66/32 Null0 tag 666         ! trigger router: blackhole + tag
 route-map RTBH permit 10
- match tag 666
+ match tag 666                                    ! only tagged statics; everything else hits the implicit deny
  set community 65000:666                          ! edge matches this community -> set next-hop to a Null0 discard
  set ip next-hop 192.0.2.1
+!
+router bgp 65000
+ address-family ipv4 unicast
+  redistribute static route-map RTBH              ! inject the tagged /32 into BGP through the route-map
+ exit-address-family
 ```
 Edge: route-map on ingress matches `65000:666` → `set ip next-hop <discard>` (statically routed to Null0). Traffic to victim dropped at every edge, attack absorbed at the border.
 **uRPF** (anti-spoof): `ip verify unicast source reachable-via rx`.
-**FlowSpec**: push an L3/L4 filter (match proto/port/rate-limit/drop) via BGP AFI/SAFI 1/133 — like a fleet-wide ACL distributed by BGP. Know the concept + that it beats per-box ACLs.
+**FlowSpec**: push an L3/L4 filter (match proto/port/rate-limit/drop) via BGP AFI/SAFI 1/133 — like a fleet-wide ACL distributed by BGP, instead of per-box ACLs. FRR is a FlowSpec **client only**: it receives and installs rules (`show bgp ipv4 flowspec detail`) but cannot originate them; a controller such as GoBGP or ExaBGP sends them.
 **Peer hardening**: `neighbor X password <secret>` (TCP-MD5), GTSM `neighbor X ttl-security hops 1`.
 
 ## 10. Troubleshooting ladder (work in this order)
@@ -150,8 +161,8 @@ Edge: route-map on ingress matches `65000:666` → `set ip next-hop <discard>` (
 6. Route in `show ip bgp` but not `show ip route` → **next-hop inaccessible** (need `next-hop-self` or an IGP).
 7. Wrong path chosen → walk the best-path algorithm (section 0).
 
-## Soundbites
-- *"Outbound I steer with local-pref; inbound with AS-path prepend, since I can't set knobs in someone else's AS. MED only between paths from the same neighbour AS."*
-- *"As a multihomed customer I filter outbound to my own prefixes so I never become unintentional transit."*
-- *"iBGP is non-transitive — full-mesh or route reflectors; RRs stamp Originator-ID and Cluster-list."*
-- *"For DDoS I trigger RTBH by community to blackhole the victim at every edge, and FlowSpec to distribute an L3/L4 filter fleet-wide via BGP instead of touching every box."*
+## Key points
+- Outbound traffic is steered with local-pref; inbound with AS-path prepend, since you can't set knobs in someone else's AS. MED only compares paths from the same neighbour AS.
+- A multihomed customer filters outbound to its own prefixes so it never becomes unintentional transit.
+- iBGP is non-transitive — full-mesh or route reflectors; RRs stamp Originator-ID and Cluster-list.
+- For DDoS: RTBH by community blackholes the victim at every edge; FlowSpec distributes an L3/L4 filter fleet-wide via BGP instead of touching every box.

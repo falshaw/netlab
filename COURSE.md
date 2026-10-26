@@ -1,8 +1,10 @@
-# Beginner Networking Course — for a firewall engineer
+# Beginner Networking — Lesson 1 (for firewall engineers)
 
 **Who this is for:** engineers with a firewall/security background who want to get comfortable with service-provider style routing. The course bridges **from what you already know (firewalls) to dynamic routing and the internet edge.** Plain English, worked examples, every lesson tied to a real command in the lab and a one-line summary.
 
-**How to use:** one lesson per session. Read the lesson, run the example in the Codespace lab, say the summary line out loud. The lab is `github.com/falshaw/netlab` (open a Codespace → `cd day1-bgp && sudo containerlab deploy`).
+**What is here:** Lesson 1 is written in full below. The course arc lists the planned lessons 2–10 as an outline; until they are written, the matching material is in [STUDY.md](STUDY.md) and the [cheat sheets](CHEATSHEETS.md).
+
+**How to use:** read the lesson, run the example in the Codespace lab, then check you can restate the summary in your own words. The lab is `github.com/falshaw/netlab` (open a Codespace → `cd day1-bgp && sudo containerlab deploy`).
 
 **The one mindset shift:** a firewall, you *hand-feed* routes (static routes + default gateway). A router can also **learn routes automatically by talking to other routers** — that's "dynamic routing" (OSPF, BGP, IS-IS). That single idea is 80% of what makes you "a networker." Everything else you basically already do.
 
@@ -25,7 +27,7 @@
 
 ---
 
-## Course arc
+## Course arc (outline — only Lesson 1 is written so far)
 
 1. **Firewall vs router — interfaces, IPs, the routing table** *(understand the setup you built)* ← start here
 2. **Static routes & the default gateway** → and *why dynamic routing has to exist*
@@ -93,9 +95,9 @@ You'll see lines flagged with a **letter** — that letter is *how r1 learned th
 
 **The lightbulb:** r1 knows `2.2.2.2` and `3.3.3.3` *even though they're not on its interfaces* — because r2 and r3 **announced them over BGP**. On a firewall you'd have hand-typed those routes. Here the routers shared them automatically. **That is "being a networker."**
 
-### D. Interview line (Lesson 1)
-> *"Coming from firewalls, the routing table and static routes were already home turf — `show ip route`, connected vs static, next-hops. The shift to network engineering was getting comfortable with routers *advertising* routes to each other dynamically — OSPF inside a domain, BGP between them — instead of me hand-feeding every route."*
+### D. Summary (Lesson 1)
+> Coming from firewalls, the routing table and static routes are already familiar — `show ip route`, connected vs static, next-hops. The new part is routers *advertising* routes to each other dynamically — OSPF inside a domain, BGP between them — instead of an engineer hand-feeding every route.
 
 ---
 
-*(Lessons 2–10 are added to this file as we go.)*
+*Lessons 2–10 are not written yet; see the course arc above for where each topic is covered in STUDY.md and the cheat sheets.*

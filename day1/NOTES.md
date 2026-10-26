@@ -26,7 +26,7 @@ BGP has **no auto-discovery** — you hand-name every peer. And **peering shares
 | `neighbor <IP> remote-as <AS>` | open a BGP session to a peer at that IP, in that AS (eBGP if AS differs from yours) |
 | `network 2.2.2.2/32` | advertise this prefix: "reach 2.2.2.2 through me" |
 | `end` | leave edit mode (config is already live) |
-| `write memory` | NOT needed here — config is live instantly; it just throws a harmless bind-mount error |
+| `write memory` | NOT needed here — config is live instantly; saving fails on the bind-mounted frr.conf (harmless) |
 
 ---
 
@@ -86,12 +86,12 @@ On r1 you'll learn 3.3.3.3 **two ways** — direct from r3, and via r2 — and B
 
 > *"Local-pref out, AS-path in."*
 
-## Best-path order (if pushed — say the levers, defer the full list honestly)
+## Best-path order (the levers first, then the full list)
 weight → **local-pref** → locally-originated → **AS-path** → origin → MED → eBGP>iBGP → lowest IGP metric → oldest → lowest router-id.
-> *"I work the lever attributes — local-pref outbound, AS-path inbound. The full 12-step order I'd confirm against the doc; in practice those few decide it."*
+> In practice the lever attributes decide it — local-pref outbound, AS-path inbound. For the full order, check `show ip bgp <prefix>`, which names the deciding attribute, or `CHEATSHEET-BGP.md` §0.
 
-## Interview line (BGP)
-> *"BGP is the routing protocol of the internet and the cloud edge — how you peer with ISPs and run private connectivity into Azure. Local-pref steers traffic outbound, AS-path or communities inbound. The big idea for an always-on platform is anycast — same prefix advertised from many sites: users hit the nearest for low latency, and a volumetric DDoS spreads across all of them instead of hitting one."*
+## Summary (BGP)
+> BGP is the routing protocol of the internet and the cloud edge — how you peer with ISPs and run private connectivity into a cloud provider. Local-pref steers traffic outbound, AS-path or communities inbound. The big idea for an always-on platform is anycast — the same prefix advertised from many sites: users hit the nearest for low latency, and a volumetric DDoS spreads across all of them instead of hitting one.
 
 ---
 
@@ -99,7 +99,7 @@ weight → **local-pref** → locally-originated → **AS-path** → origin → 
 Modern BGP (FRR 8+) passes **no routes** on an eBGP session until you attach a policy. Sessions go `Established` but you see `0 accepted prefixes` + "discarded due to missing policy".
 - **Production fix:** attach a route-map per neighbor (explicit allow).
 - **Lab fix:** `no bgp ebgp-requires-policy` under `router bgp`, then `clear ip bgp *`.
-> Interview: *"Modern BGP is secure-by-default per RFC 8212 — an eBGP peer exchanges nothing until you attach an explicit policy. Old IOS passed everything by default."*
+> **Summary:** modern BGP is secure-by-default per RFC 8212 — an eBGP peer exchanges nothing until you attach an explicit policy. Old IOS passed everything by default.
 
 ## Reading `show ip bgp <prefix>` (the best-path detail view)
 FRR shows every path AND names the winner + WHY: `best (Local Pref)`, `best (Shorter AS-path)`, etc. Each path lists its AS-path, localpref, next-hop, and `from <peer> (<router-id>)`. Use this to *prove* which attribute decided.

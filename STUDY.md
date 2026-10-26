@@ -28,7 +28,10 @@ show ip bgp summary        # neighbors -> want "Established" (a number under Pfx
 show ip bgp                # the BGP table; ">" = the chosen best path
 show ip route bgp          # BGP routes installed (flagged "B")
 show bgp neighbors 10.0.12.2 advertised-routes
-ping 3.3.3.3 source 1.1.1.1
+```
+Ping loopback-to-loopback from the container shell (outside vtysh):
+```bash
+sudo docker exec clab-day1-bgp-r1 ping -c 3 -I 1.1.1.1 3.3.3.3
 ```
 r1 learns 3.3.3.3 two ways — direct from r3, and via r2. It picks the **shorter AS-path** (direct). See it: `show ip bgp 3.3.3.3`.
 
@@ -57,27 +60,29 @@ Watch r1's best path move. **That's it — local-pref steers traffic *out*, AS-p
 
 **Break & fix:** on r2, `interface eth1` → `shutdown`. On r1, `show ip bgp summary` shows the peer drop to Active; routes reroute via r3. `no shutdown` → recovers. That's BGP resilience, live.
 
-> **Summary line:** *"I peer with neighbor + network statements, confirm `show ip bgp summary` is Established, and steer with local-pref outbound / AS-path inbound. Anycast — same prefix from many sites — gives low latency and DDoS spread; that's the big BGP idea for an always-on platform."*
+> **Summary:** peer with `neighbor` + `network` statements, confirm `show ip bgp summary` is Established, and steer with local-pref outbound / AS-path inbound. Anycast — the same prefix from many sites — gives low latency and spreads DDoS load; that is the big BGP idea for an always-on platform.
 
 ---
 
 ## Day 2 — Anycast + multihoming (the internet edge)
 
-**Goal:** advertise the **same prefix (e.g. 100.64.0.1/32) from two "PoP" routers**; a client reaches whichever is closer; kill one PoP and traffic shifts to the other with no address change. Multihome an edge router to two upstream "ISPs" and steer with communities/local-pref.
+**Goal:** advertise the **same prefix (e.g. 100.64.0.1/32) from two "PoP" routers** (r2 and r3); r1 reaches whichever is closer; kill one PoP and traffic shifts to the other with no address change. Multihome an edge router to two upstream "ISPs" and steer with communities/local-pref.
 
-**Key commands:** `show ip bgp 100.64.0.1` (two paths, one prefix), `traceroute` from the client to see which PoP it hits, BGP `maximum-prefix` and prefix-lists for edge hardening.
+**Key commands:** `show ip bgp 100.64.0.1` (two paths, one prefix), `traceroute 100.64.0.1` from r1's shell (`sudo docker exec clab-day2-r1 traceroute 100.64.0.1`) to see which PoP it hits, BGP `maximum-prefix` and prefix-lists for edge hardening.
 
 > **Why it matters:** anycast is *the* answer to "low latency globally **and** DDoS resilience" — a volumetric flood spreads across all PoPs instead of hitting one. (Topology added to `day2/`.)
 
 ---
 
-## Day 3 — DDoS defence: RTBH + BGP FlowSpec (hands-on)
+## Day 3 — DDoS defence: RTBH (hands-on) + BGP FlowSpec (concept)
 
-**Goal:** trigger **Remote-Triggered Black Hole** (community-tagged /32 → next-hop discard, propagated by BGP) and a **FlowSpec** rule (drop a specific 5-tuple) — the surgical vs blunt DDoS tools. Optional: an nginx container with `limit_req` to *feel* L7 rate-limiting.
+**Goal:** trigger **Remote-Triggered Black Hole** (community-tagged /32 → next-hop discard, propagated by BGP) hands-on, and understand **FlowSpec** (drop a specific 5-tuple) — the blunt vs surgical DDoS tools.
 
-**Key commands:** FRR `bgp flowspec`, `show bgp ipv4 flowspec detail`, RTBH via `route-map` setting community + a static discard route on the trigger.
+**Key commands (RTBH, hands-on):** a static discard route + `route-map` setting the blackhole community on the trigger router, then `show ip bgp <victim>/32` and `show ip route <victim>/32` on the edge. See `CHEATSHEET-BGP.md` §9.
 
-> **Summary line:** *"RTBH is the blunt kill-switch for a sacrificial IP; FlowSpec is surgical — drop just the attack 5-tuple and keep the service IP alive. Volumetric you solve with anycast + scrubbing scale; L7 you solve with WAF + rate-limit + behavioural scoring, because a legitimate traffic surge can look like an HTTP flood."* (Topology → `day3/`.)
+**FlowSpec (concept only in this lab):** FRR is a FlowSpec *client* — it can receive rules from a BGP peer and install them (`show bgp ipv4 flowspec detail`), but it cannot originate them from its CLI. To send a rule you need an external BGP speaker such as **GoBGP** or **ExaBGP** as the controller. This lab has no such node, so FlowSpec stays at the concept level here.
+
+> **Summary:** RTBH is the blunt kill-switch for a sacrificial IP; FlowSpec is surgical — drop just the attack 5-tuple and keep the service IP alive. Volumetric attacks are met with anycast + scrubbing scale; L7 attacks with WAF + rate-limit + behavioural scoring, because a legitimate traffic surge can look like an HTTP flood. (Topology → `day3/`.)
 
 ---
 
@@ -87,7 +92,7 @@ Watch r1's best path move. **That's it — local-pref steers traffic *out*, AS-p
 
 **Key commands:** `show ip ospf neighbor`, `show isis neighbor`, `show isis database`, `show ip route isis`.
 
-> **Summary line:** *"Both link-state. OSPF I've run as the enterprise IGP; IS-IS is the SP favourite — runs at L2 not in IP, TLV-extensible so IPv6 and segment-routing slot in with one instance. I've run OSPF hands-on; IS-IS I now know the config and would ramp on."* (→ `day4/`.)
+> **Summary:** both are link-state. OSPF is the common enterprise IGP; IS-IS is the SP favourite — it runs at L2, not in IP, and is TLV-extensible, so IPv6 and segment routing slot in with one instance. (→ `day4/`.)
 
 ---
 
@@ -95,11 +100,11 @@ Watch r1's best path move. **That's it — local-pref steers traffic *out*, AS-p
 
 **Goal:** build an MPLS core with **L3VPN** (VRF, RD/RT, MP-BGP VPNv4) and see **Segment Routing** labels. FRR does the *control plane* fully (LDP, VPNv4, SR) — you'll read the labels and VRF tables.
 
-> ⚠️ **Cloud caveat (honest):** Codespaces can't load kernel MPLS modules, so packets may not *forward* through labels — but you'll see the full control-plane config, label bindings, and VRF separation, which is what an interview probes. For real MPLS *dataplane*, use **Juniper vLabs** (free hosted) — the one place to see it actually switch labels.
+> ⚠️ **Cloud caveat:** Codespaces can't load kernel MPLS modules, so packets may not *forward* through labels — but you'll see the full control-plane config, label bindings, and VRF separation, which is the point of this lab. For real MPLS *dataplane*, use **Juniper vLabs** (free hosted) — the one place to see it actually switch labels.
 
 **Key commands:** `show mpls table`, `show bgp ipv4 vpn`, `show ip route vrf CUST-A`, `show isis segment-routing prefix-sids`.
 
-> **Summary line:** *"MPLS decouples forwarding from routing — label once at the edge, swap in the core. RSVP-TE engineers paths + sub-50ms FRR; the modern direction is Segment Routing — path in the packet header, stateless core, TI-LFA protection. Config I'd ramp on; the architecture I'm solid on."* (→ `day5/`.)
+> **Summary:** MPLS decouples forwarding from routing — label once at the edge, swap in the core. RSVP-TE engineers paths + sub-50ms FRR; the modern direction is Segment Routing — path in the packet header, stateless core, TI-LFA protection. (→ `day5/`.)
 
 **Also today (read, can't lab):** SS7/SIP — `CHEATSHEET-SIGNALING-SIP-SS7.md`. Kafka/K8s networking — `CHEATSHEET-KAFKA-K8S.md` (advertised-listeners, CNI, Ingress, netpol).
 
@@ -111,15 +116,15 @@ Watch r1's best path move. **That's it — local-pref steers traffic *out*, AS-p
 
 **Key commands:** `show bfd peers`, watch failover timing with/without BFD, `show ip route` ECMP entries.
 
-> **Summary line:** *"Private circuit primary + VPN backup, BGP choosing, **BFD for sub-second detection** so traffic shifts before users notice. SDN/SD-WAN = pull the control plane out, central controller pushes app-aware policy, edges forward — controller out of the data path so a controller failure doesn't drop traffic. SD-WAN overlays MPLS, doesn't replace it."* (→ `day6/`.)
+> **Summary:** private circuit primary + VPN backup, BGP choosing, **BFD for sub-second detection** so traffic shifts before users notice. SDN/SD-WAN = pull the control plane out, a central controller pushes app-aware policy, edges forward — the controller stays out of the data path so a controller failure doesn't drop traffic. SD-WAN overlays MPLS, it doesn't replace it. (→ `day6/`.)
 
 ---
 
-## Day 7 — Capstone + live-design rehearsal
+## Day 7 — Capstone + design walk-through
 
-**Goal:** assemble a **"mini internet edge"** — anycast front, multihomed BGP, RTBH ready, IGP core, a VRF, BFD failover — the whole picture in one topology. Then practice the **whiteboard answer out loud**: *"design a resilient, low-latency, DDoS-hardened edge for an always-on online platform."*
+**Goal:** assemble a **"mini internet edge"** — anycast front, multihomed BGP, RTBH ready, IGP core, a VRF, BFD failover — the whole picture in one topology. Then walk through the design end to end: *"a resilient, low-latency, DDoS-hardened edge for an always-on online platform."*
 
-Use this as the proof you can hold a real network end-to-end. Pair with `CHEATSHEET-EDGE-DEFENCE.md` section 4 (the whiteboard answer).
+This ties every earlier day into one network. Pair with `CHEATSHEET-EDGE-DEFENCE.md` section 4 (the reference design).
 
 ---
 
@@ -132,5 +137,5 @@ show ip bgp summary | show ip bgp           # BGP peers / table
 show ip ospf neighbor | show isis neighbor  # IGP adjacencies
 show bfd peers                              # sub-second failover state
 clear bgp *                                 # re-apply BGP policy
-write memory                                # save
+write memory                                # not needed in these labs: config is live at once, and saving to the bind-mounted frr.conf fails (see day1/NOTES.md)
 ```

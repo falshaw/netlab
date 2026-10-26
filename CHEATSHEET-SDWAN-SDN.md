@@ -11,7 +11,7 @@ for integrating it with **legacy constructs** is "overlay on existing MPLS, don'
 - **Forwarding/Data Plane (FP)** = actually moves packets (line-rate). Stays **distributed** on the devices.
 - **Management Plane** = config/telemetry/orchestration.
 Traditional routers = CP+FP **on every box**. SDN/SD-WAN = **lift the CP out**, program the FP centrally.
-> Soundbite: *"CP/FP abstraction means the forwarding plane stays distributed at line rate, but the control plane is centralised so I express intent once and the controller programs every device — that's the core of both SDN and SD-WAN."*
+> **Summary:** CP/FP abstraction means the forwarding plane stays distributed at line rate, but the control plane is centralised, so intent is expressed once and the controller programs every device — that's the core of both SDN and SD-WAN.
 
 ## 1. SDN (data-centre / campus)
 - **Controller** (ODL, ONOS, Cisco APIC/ACI, vendor) holds the CP; talks **southbound** to devices, **northbound** to apps.
@@ -37,7 +37,7 @@ Abstracts **multiple transports** (MPLS + broadband + LTE/5G) into **one policy-
 ### "Integration across legacy constructs"
 > *"You overlay SD-WAN on top of the existing MPLS L3VPN rather than ripping it out — MPLS becomes just one transport in the fabric alongside internet and LTE. Sites migrate gradually; the overlay gives app-aware steering and central policy while the legacy WAN still carries what it always did. CP/FP split means the edges keep forwarding at line rate while vSmart centralises the routing/policy decisions."*
 
-## 3. SD-WAN vs MPLS (the comparison they'll want)
+## 3. SD-WAN vs MPLS
 | | MPLS L3VPN | SD-WAN |
 |---|---|---|
 | Path | single provider circuit | many transports bonded |
@@ -47,7 +47,7 @@ Abstracts **multiple transports** (MPLS + broadband + LTE/5G) into **one policy-
 | SLA | hard guarantee | measured/steered, best-effort transports |
 | Provisioning | weeks | zero-touch, minutes |
 
-## 4. Soundbites
-- *"SD-WAN is CP/FP abstraction applied to the WAN: vSmart centralises control via OMP, the edges keep forwarding, and policy steers each app across MPLS/broadband/LTE by measured loss/latency/jitter against an SLA."*
-- *"I treat MPLS as one transport in the overlay, not the enemy — integrate, don't rip-and-replace."*
-- *"SASE = SD-WAN fabric plus cloud-delivered security (SWG, CASB, ZTNA, FWaaS) — the security and the WAN converge at the edge."* (security and networking converge)
+## 4. Key points
+- SD-WAN is CP/FP abstraction applied to the WAN: vSmart centralises control via OMP, the edges keep forwarding, and policy steers each app across MPLS/broadband/LTE by measured loss/latency/jitter against an SLA.
+- MPLS becomes one transport in the overlay, not the enemy — integrate, don't rip-and-replace.
+- SASE = SD-WAN fabric plus cloud-delivered security (SWG, CASB, ZTNA, FWaaS) — security and the WAN converge at the edge.

@@ -10,7 +10,7 @@ Vendor router images (IOS-XR, Junos) need nested virtualisation, licences and a 
 
 ## How it works
 
-- `.devcontainer/devcontainer.json` uses the containerlab docker-in-docker devcontainer image (4 CPU / 8 GB), installs the containerlab VS Code extension and pre-pulls `quay.io/frrouting/frr:10.7.1` and `ghcr.io/srl-labs/network-multitool`.
+- `.devcontainer/devcontainer.json` uses the containerlab docker-in-docker devcontainer image (4 CPU / 8 GB), installs the containerlab VS Code extension and pre-pulls `quay.io/frrouting/frr:10.7.1`.
 - Each lab folder holds a `*.clab.yml` topology, one `rN.conf` FRR config per router and a `.drawio` diagram.
 - `common/daemons` is mounted into every node as `/etc/frr/daemons` (enables bgpd, ospfd, ospf6d, isisd, ldpd, bfdd).
 
@@ -40,7 +40,7 @@ Reset a lab with `sudo containerlab destroy --cleanup` then `sudo containerlab d
 | `day1b/` | iBGP, next-hop-self, route reflectors, communities (4 routers) | empty canvas: wiring + IPs, no BGP |
 | `day2/` | Anycast + multihoming | empty canvas |
 | `day2-te/` | BGP multihoming & traffic engineering (AS 65000 dual-homed to two ISPs) | ISPs pre-configured, you build AS 65000 |
-| `day3/` | DDoS defence: RTBH + FlowSpec | empty canvas |
+| `day3/` | DDoS defence: RTBH (hands-on) + FlowSpec (concept) | empty canvas |
 | `day4/` | OSPF, then IS-IS | empty canvas |
 | `day5/` | MPLS L3VPN + Segment Routing (control plane) | empty canvas |
 | `day6/` | Resilience: BFD + ECMP | empty canvas |
@@ -52,7 +52,7 @@ Labs with a `NOTES.md` (`day1`, `day1b`, `day2-te`) contain step-by-step tasks a
 ## Study material
 
 - [STUDY.md](STUDY.md) — the day-by-day plan with commands and break/fix exercises.
-- [COURSE.md](COURSE.md) — a beginner course bridging from firewall concepts to dynamic routing.
+- [COURSE.md](COURSE.md) — Lesson 1 of a beginner track bridging from firewall concepts to dynamic routing, plus the outline of the planned lessons.
 - [CHEATSHEETS.md](CHEATSHEETS.md) — index of the topic cheat sheets (BGP, OSPF, MPLS, edge defence, SD-WAN, SIP/SS7, QoS, AAA, Kafka/K8s).
 
 ## Images
@@ -60,7 +60,6 @@ Labs with a `NOTES.md` (`day1`, `day1b`, `day2-te`) contain step-by-step tasks a
 | Image | Role |
 |---|---|
 | `quay.io/frrouting/frr:10.7.1` | the routers (BGP/OSPF/IS-IS/MPLS/SR/BFD) |
-| `ghcr.io/srl-labs/network-multitool` | Linux host for ping/curl tests |
 
 The FRR image is pinned. The official FRR images are published on `quay.io/frrouting/frr`; the Docker Hub `frrouting/frr:latest` tag stopped at 8.4 (2022). The `frr version` line in every `rN.conf` matches the pinned tag. To move to a newer release, change the tag in every `*.clab.yml` and in `.devcontainer/devcontainer.json`.
 
@@ -75,7 +74,8 @@ The devcontainer is built for **GitHub Codespaces**. It runs Docker-in-Docker as
 
 To run the labs locally, use a native Linux host or a WSL2 distro with its own Docker Engine (not Docker Desktop), install containerlab (`bash -c "$(curl -sL https://get.containerlab.dev)"`) and deploy any lab folder with `sudo containerlab deploy` as above.
 
-On Windows, clone with the repository's `.gitattributes` in effect (any recent Git does this). It forces LF line endings; a CRLF copy of `common/daemons` or an `rN.conf` breaks FRR inside the container (`$'': command not found`).
+On Windows, clone with the repository's `.gitattributes` in effect (any recent Git does this). It forces LF line endings; a CRLF copy of `common/daemons` or an `rN.conf` breaks FRR inside the container (`$'
+': command not found`).
 
 ## License
 

@@ -4,15 +4,15 @@
 OSPF is the most common **IGP** (Interior Gateway Protocol) — it routes *inside* one organisation/AS, where
 BGP routes *between* them. It's link-state: every router shares LSAs, builds an identical map, and runs SPF
 (Dijkstra). It's the **foundation under iBGP**: without an IGP carrying your
-links and loopbacks, your internal BGP next-hops won't resolve (the `inaccessible` trap). Expect deep Q&A
-(areas, LSA types, DR/BDR) and the classic troubleshooting question (adjacency stuck in ExStart = MTU).
+links and loopbacks, your internal BGP next-hops won't resolve (the `inaccessible` trap). The core topics are
+areas, LSA types, DR/BDR, and the classic troubleshooting case (adjacency stuck in ExStart = MTU).
 
 > OSPFv2 (IPv4). Link-state, Dijkstra/SPF, AD 110, metric = cost = 10^8 / bandwidth(bps).
 > FRR uses `interface` config for most knobs; IOS often uses `network` under the process.
 
 ---
 
-## 0. Facts they will ask
+## 0. Core facts
 - **Link-state**: every router floods LSAs, builds an identical LSDB, runs **SPF (Dijkstra)** to get its own tree.
 - **Areas**: hierarchy to limit flooding. **Area 0 = backbone**; every other area must touch it (or use a virtual-link). ABR = between areas, ASBR = injects external routes.
 - **Adjacency states**: Down → Init → 2-Way → ExStart → Exchange → Loading → **Full**. Stuck in **ExStart** = MTU mismatch. Stuck in **2-Way** on LAN = normal between two DROthers.
@@ -25,7 +25,6 @@ links and loopbacks, your internal BGP next-hops won't resolve (the `inaccessibl
 ```
 router ospf
  ospf router-id 1.1.1.1
- passive-interface lo                  ! advertise loopback but no hellos out of it
 !
 interface eth1
  ip ospf area 0                        ! FRR: put the interface in area 0
@@ -33,7 +32,9 @@ interface eth1
 !
 interface lo
  ip ospf area 0
+ ip ospf passive                       ! FRR: advertise the loopback, send no hellos out of it
 ```
+FRR sets passive per interface (`ip ospf passive`); the IOS-style `passive-interface <ifname>` under `router ospf` is not in current FRR. `passive-interface default` under `router ospf` still exists (see section 6).
 IOS equivalent:
 ```
 router ospf 1
@@ -89,7 +90,10 @@ interface eth1
  ip ospf message-digest-key 1 md5 <secret>
 !
 router ospf
- passive-interface default             ! safest: passive everywhere, then 'no passive-interface eth1' on real links
+ passive-interface default             ! safest: passive everywhere...
+!
+interface eth1
+ no ip ospf passive                    ! ...then turn OSPF back on for the real links (per-interface wins)
 ```
 
 ## 7. The OSPF↔BGP link (why this lab matters)
@@ -97,12 +101,12 @@ iBGP next-hops are only reachable if an IGP carries the internal links + loopbac
 - Run OSPF on all internal links + loopbacks → loopbacks now reachable AS-wide.
 - Peer iBGP on loopbacks (`update-source lo`) → sessions survive a link failure.
 - BGP next-hop now resolves via OSPF → that `inaccessible` route from day1b turns valid.
-> Soundbite: *"OSPF is the IGP under iBGP — it advertises the loopbacks and links so BGP next-hops resolve; I peer iBGP on loopbacks so a single link drop doesn't tear the session."*
+> **Summary:** OSPF is the IGP under iBGP — it advertises the loopbacks and links so BGP next-hops resolve; peering iBGP on loopbacks means a single link drop doesn't tear the session.
 
 ## 8. Troubleshooting ladder
 1. `show ip ospf neighbor` → not FULL?
 2. **Stuck ExStart/Exchange** → **MTU mismatch** (most common) → fix MTU or `ip ospf mtu-ignore`.
-3. **No neighbour at all** → hello/dead timer mismatch, area mismatch, subnet/mask mismatch, auth mismatch, or `passive-interface` on the link.
+3. **No neighbour at all** → hello/dead timer mismatch, area mismatch, subnet/mask mismatch, auth mismatch, or the link is passive (`ip ospf passive` / `passive-interface default`).
 4. **2-WAY and won't go FULL** on a LAN → both are DROthers (normal); only DR/BDR go full with everyone.
 5. **Adjacency up but no routes** → check `network`/`ip ospf area`, area type blocking LSAs, or distribute-list.
 6. Wrong path → check `ip ospf cost` / reference-bandwidth consistency.
@@ -112,6 +116,6 @@ Same idea (link-state, SPF) but runs **directly on L2 (CLNS/NET address)**, not 
 - **Levels** not areas: **L1** = intra-area, **L2** = backbone (between areas). A router can be L1, L2, or L1/L2.
 - **NET address** = area + system-id + NSEL, e.g. `49.0001.1921.6800.1001.00`.
 - Adjacency = hellos (IIH); metric is just "narrow (0-63)/wide (0-16M)" — use **wide-metrics** always.
-- FRR: `router isis` + `interface eth1 / ip router isis <tag> / isis circuit-type level-2-only`.
+- FRR: `router isis <tag>` + `net <NET>`, then `interface eth1 / ip router isis <tag> / isis circuit-type level-2-only` (same tag).
 - Show: `show isis neighbor`, `show isis database`.
-> Soundbite: *"IS-IS is link-state like OSPF but runs on CLNS not IP, uses levels instead of areas, and scales better in big SP cores — that's why carriers favour it. I'm strongest on OSPF; the concepts map directly."*
+> **Summary:** IS-IS is link-state like OSPF but runs on CLNS, not IP, uses levels instead of areas, and scales well in big SP cores — that's why carriers favour it. The OSPF concepts map across directly.

@@ -3,11 +3,11 @@
 ## What this is & why it matters
 AAA = **Authentication** (who are you), **Authorization** (what may you do), **Accounting** (what did you do).
 It's how network devices and network access (admin logins, VPN, Wi-Fi, 802.1X NAC) are controlled and audited
-— core to any regulated operator's security and compliance. The classic question is **RADIUS vs TACACS+** — know that table.
+— core to the security and compliance of any regulated, high-traffic web platform. The classic comparison is **RADIUS vs TACACS+** — know that table.
 
 > AAA = Authentication (who), Authorization (what you can do), Accounting (what you did).
 
-## 0. RADIUS vs TACACS+ (the table they want)
+## 0. RADIUS vs TACACS+
 | | **RADIUS** | **TACACS+** |
 |---|---|---|
 | Body | IETF (RFC 2865/2866) | Cisco (now open draft) |
@@ -70,6 +70,6 @@ show dot1x all
 - Auth fails everywhere → shared **key** mismatch, wrong port/UDP-vs-TCP, ACS/ISE policy, or NAS-IP not registered.
 - Locked out → console + local fallback.
 
-## 4. Soundbites
-- *"TACACS+ separates authN/authZ and encrypts the whole payload over TCP — that's why it's for device admin with per-command authorization. RADIUS is UDP, combines authN/authZ, encrypts only the password, and is the standard for network access — 802.1X, VPN, Wi-Fi."*
-- *"For NAC I run 802.1X with EAP-TLS, MAB for headless devices, dynamic VLAN/dACL on success, and a quarantine VLAN on failure — always with a local fallback so a dead AAA server doesn't lock the fleet out."*
+## 4. Key points
+- TACACS+ separates authN/authZ and encrypts the whole payload over TCP — that's why it's used for device admin with per-command authorization. RADIUS is UDP, combines authN/authZ, encrypts only the password, and is the standard for network access — 802.1X, VPN, Wi-Fi.
+- A typical NAC design: 802.1X with EAP-TLS, MAB for headless devices, dynamic VLAN/dACL on success, a quarantine VLAN on failure — always with a local fallback so a dead AAA server doesn't lock the fleet out.

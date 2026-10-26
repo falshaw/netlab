@@ -13,8 +13,9 @@
 #
 # 8.8.8.0/24 is advertised by BOTH ISPs -> two paths -> you choose (TE). See NOTES.md.
 #
-# Same proven pattern as day1b: exec sets interface IPs in the kernel (after the veths
-# exist, so no race) and pushes config via vtysh. NO frr restart (that kills PID 1).
+# Start state comes from the rN.conf files: interface IPs on all four routers, the
+# 192.0.2.0/24 Null0 route on r1/r2, and full BGP on the ISPs (r3, r4) only.
+# r1/r2 have NO BGP at deploy. FRR applies each file when the links come up.
 name: day2-te
 
 topology:
@@ -28,43 +29,23 @@ topology:
       binds:
         - ../common/daemons:/etc/frr/daemons
         - r1.conf:/etc/frr/frr.conf
-      exec:
-        - ip addr add 10.0.13.1/30 dev eth1
-        - ip link set eth1 up
-        - ip addr add 10.0.12.1/30 dev eth2
-        - ip link set eth2 up
-        - vtysh -c "conf t" -c "ip route 192.0.2.0/24 Null0" -c "router bgp 65000" -c "bgp router-id 1.1.1.1" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.13.2 remote-as 65100" -c "neighbor 10.0.12.2 remote-as 65000" -c "neighbor 10.0.12.2 next-hop-self" -c "network 192.0.2.0/24"
     r2:
       kind: linux
       binds:
         - ../common/daemons:/etc/frr/daemons
         - r2.conf:/etc/frr/frr.conf
-      exec:
-        - ip addr add 10.0.24.1/30 dev eth1
-        - ip link set eth1 up
-        - ip addr add 10.0.12.2/30 dev eth2
-        - ip link set eth2 up
-        - vtysh -c "conf t" -c "ip route 192.0.2.0/24 Null0" -c "router bgp 65000" -c "bgp router-id 2.2.2.2" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.24.2 remote-as 65200" -c "neighbor 10.0.12.1 remote-as 65000" -c "neighbor 10.0.12.1 next-hop-self" -c "network 192.0.2.0/24"
     # ===== ISP-A (AS 65100) = comes up working automatically =====
     r3:
       kind: linux
       binds:
         - ../common/daemons:/etc/frr/daemons
         - r3.conf:/etc/frr/frr.conf
-      exec:
-        - ip addr add 10.0.13.2/30 dev eth1
-        - ip link set eth1 up
-        - vtysh -c "conf t" -c "ip route 8.8.8.0/24 Null0" -c "ip route 100.64.0.0/24 Null0" -c "router bgp 65100" -c "bgp router-id 3.3.3.3" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.13.1 remote-as 65000" -c "network 8.8.8.0/24" -c "network 100.64.0.0/24"
     # ===== ISP-B (AS 65200) = comes up working automatically =====
     r4:
       kind: linux
       binds:
         - ../common/daemons:/etc/frr/daemons
         - r4.conf:/etc/frr/frr.conf
-      exec:
-        - ip addr add 10.0.24.2/30 dev eth1
-        - ip link set eth1 up
-        - vtysh -c "conf t" -c "ip route 8.8.8.0/24 Null0" -c "ip route 203.0.113.0/24 Null0" -c "router bgp 65200" -c "bgp router-id 4.4.4.4" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.24.1 remote-as 65000" -c "network 8.8.8.0/24" -c "network 203.0.113.0/24"
   links:
     - endpoints: ["r1:eth1", "r3:eth1"]   # 10.0.13.0/30  eBGP  AS65000 <-> ISP-A
     - endpoints: ["r2:eth1", "r4:eth1"]   # 10.0.24.0/30  eBGP  AS65000 <-> ISP-B

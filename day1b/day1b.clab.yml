@@ -11,6 +11,8 @@
 #   r2 and r3 are NOT wired to each other on purpose — that gap is the whole point of
 #   the Route Reflector lesson in Stage C.
 #
+# Deploys with interfaces + IPs only (from rN.conf). NO BGP: you build it from NOTES.md.
+#
 #            AS65100                    AS 65000 ("our network")
 #         r4 (lo 4.4.4.4)
 #              | 10.0.14.0/30
@@ -31,43 +33,21 @@ topology:
       binds:
         - ../common/daemons:/etc/frr/daemons
         - r1.conf:/etc/frr/frr.conf
-      # exec runs AFTER links are wired -> set L3 in kernel (no FRR/veth race),
-      # then push the full BGP config via vtysh so the fabric comes up working.
-      exec:
-        - ip addr add 10.0.14.1/30 dev eth1
-        - ip link set eth1 up
-        - ip addr add 10.0.12.1/30 dev eth2
-        - ip link set eth2 up
-        - ip addr add 10.0.13.1/30 dev eth3
-        - ip link set eth3 up
-        - vtysh -c "conf t" -c "router bgp 65000" -c "bgp router-id 1.1.1.1" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.14.2 remote-as 65100" -c "neighbor 10.0.12.2 remote-as 65000" -c "neighbor 10.0.13.2 remote-as 65000" -c "neighbor 10.0.12.2 next-hop-self" -c "neighbor 10.0.13.2 next-hop-self" -c "neighbor 10.0.12.2 route-reflector-client" -c "neighbor 10.0.13.2 route-reflector-client"
     r2:
       kind: linux
       binds:
         - ../common/daemons:/etc/frr/daemons
         - r2.conf:/etc/frr/frr.conf
-      exec:
-        - ip addr add 10.0.12.2/30 dev eth1
-        - ip link set eth1 up
-        - vtysh -c "conf t" -c "router bgp 65000" -c "bgp router-id 2.2.2.2" -c "neighbor 10.0.12.1 remote-as 65000" -c "network 2.2.2.2/32"
     r3:
       kind: linux
       binds:
         - ../common/daemons:/etc/frr/daemons
         - r3.conf:/etc/frr/frr.conf
-      exec:
-        - ip addr add 10.0.13.2/30 dev eth1
-        - ip link set eth1 up
-        - vtysh -c "conf t" -c "router bgp 65000" -c "bgp router-id 3.3.3.3" -c "neighbor 10.0.13.1 remote-as 65000" -c "network 3.3.3.3/32"
     r4:
       kind: linux
       binds:
         - ../common/daemons:/etc/frr/daemons
         - r4.conf:/etc/frr/frr.conf
-      exec:
-        - ip addr add 10.0.14.2/30 dev eth1
-        - ip link set eth1 up
-        - vtysh -c "conf t" -c "ip route 203.0.113.0/24 Null0" -c "router bgp 65100" -c "bgp router-id 4.4.4.4" -c "no bgp ebgp-requires-policy" -c "neighbor 10.0.14.1 remote-as 65000" -c "network 203.0.113.0/24"
   links:
     - endpoints: ["r1:eth1", "r4:eth1"]   # 10.0.14.0/30  (eBGP: our border <-> internet)
     - endpoints: ["r1:eth2", "r2:eth1"]   # 10.0.12.0/30  (iBGP: r1 <-> r2)

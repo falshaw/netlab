@@ -37,7 +37,7 @@ Reset a lab with `sudo containerlab destroy --cleanup` then `sudo containerlab d
 |---|---|---|
 | `day1-bgp/` | eBGP triangle, 3 ASes, loopbacks advertised | fully configured (reference) |
 | `day1/` | BGP fundamentals | empty canvas: wiring + IPs, no routing |
-| `day1b/` | iBGP, next-hop-self, route reflectors, communities (4 routers) | interfaces + BGP pushed by `exec:` |
+| `day1b/` | iBGP, next-hop-self, route reflectors, communities (4 routers) | empty canvas: wiring + IPs, no BGP |
 | `day2/` | Anycast + multihoming | empty canvas |
 | `day2-te/` | BGP multihoming & traffic engineering (AS 65000 dual-homed to two ISPs) | ISPs pre-configured, you build AS 65000 |
 | `day3/` | DDoS defence: RTBH + FlowSpec | empty canvas |

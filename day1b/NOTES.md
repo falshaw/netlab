@@ -1,8 +1,8 @@
 # Day 1b — BGP DEEP DIVE — iBGP, next-hop-self, Route Reflectors (+ communities)
 
 This is the **architect** half of BGP. Day 1 was eBGP between strangers. Today is what happens
-**inside** one network, and it's the stuff any serious BGP design discussion digs into: *"explain iBGP
-full-mesh and why route reflectors exist."* If you can paste this and narrate it, you own that question.
+**inside** one network: iBGP, the full-mesh problem, and why route reflectors exist. Work through the
+stages in order and you can explain each of those from your own lab output.
 
 ---
 
@@ -36,9 +36,8 @@ r2 and r3 are deliberately **not** cabled to each other: that missing wire is th
 
 ---
 
-## Bring it up (3 lines)
+## Bring it up (2 lines)
 ```
-git pull
 cd day1b
 sudo containerlab deploy
 ```
@@ -147,7 +146,7 @@ show ip route bgp                        ! 203.0.113.0/24 now installed as "B"  
 ```
 ✅ **Stage B done when** the internet route is installed on r2 **and** r3 after next-hop-self.
 
-> **Interview line:** *"iBGP doesn't change the next-hop, so an internal router inherits the eBGP peer's
+> **Summary:** *"iBGP doesn't change the next-hop, so an internal router inherits the eBGP peer's
 > address and can't reach it. On the border router I run `next-hop-self` so my internal routers resolve
 > external routes through me."*
 
@@ -187,13 +186,13 @@ show ip bgp 2.2.2.2/32                    ! it APPEARS now — reflection works 
 `Originator` + `Cluster list` are the loop-prevention stamps an RR adds in place of the AS-path
 (AS-path can't grow inside one AS, so RRs use these instead).
 
-> ⚠️ **Honest detail (and a great thing to say):** on r3 that reflected route may still show next-hop
+> ⚠️ **Note:** on r3 that reflected route may still show next-hop
 > **inaccessible** — because r2's next-hop (10.0.12.2) isn't reachable from r3 without an **IGP**. That is
 > exactly *why real iBGP runs over OSPF/IS-IS and peers on loopbacks* — the IGP resolves BGP next-hops and
 > carries the loopbacks. That's **Day 4 (OSPF)**. Today's win is proving the **reflection** itself: the
 > route now reaches r3 at all, which without the RR it never did.
 
-> **Interview line:** *"iBGP is non-transitive — it won't relay a route between internal peers, so you
+> **Summary:** *"iBGP is non-transitive — it won't relay a route between internal peers, so you
 > either full-mesh (which scales as n-squared) or use route reflectors. The RR reflects between clients and
 > stamps Originator-ID and Cluster-list for loop prevention. Underneath it you run an IGP so the BGP
 > next-hops actually resolve."*
@@ -242,7 +241,7 @@ clear ip bgp * soft
 ```
 show ip bgp 203.0.113.0/24               ! localpref now 200, "best (Local Pref)"
 ```
-> **Interview line:** *"Communities are route tags — `no-export` keeps a prefix inside the AS, and custom
+> **Summary:** *"Communities are route tags — `no-export` keeps a prefix inside the AS, and custom
 > communities let a customer signal 'prefer this' or 'blackhole this' so the provider acts on the tag
 > instead of editing policy per prefix. RTBH triggering is literally a community."*
 
@@ -255,7 +254,7 @@ sudo containerlab destroy
 
 ---
 
-## The 4 lines that win the iBGP question
+## Key points (iBGP)
 1. *"eBGP between strangers, iBGP inside my AS — same AS, AS-path untouched."*
 2. *"iBGP doesn't rewrite the next-hop → `next-hop-self` on the border router."*
 3. *"iBGP never relays to another iBGP peer → full-mesh **or** route reflectors."*

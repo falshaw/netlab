@@ -103,23 +103,35 @@ sudo docker exec clab-day2-te-r4 vtysh -c "show ip bgp 192.0.2.0/24"
 ---
 
 # TASK 4 — Communities (tag once, act anywhere)
-Goal: let ISP-A tag certain routes so *you* auto-deprioritise them. Real ISPs publish "if you tag a
-route 65100:120 we set local-pref 120" menus — you'll consume one.
+Goal: act on a tag your ISP sets. ISP-A (r3) already tags **8.8.8.0/24** with community **65100:120**
+when it advertises it to you. Read it as ISP-A's published meaning: "65100:120 = treat this as a backup
+path". Real ISPs publish community menus like this so customers can apply policy without per-prefix config.
 
-**Your task:** on r1, match a community on routes from ISP-A and set local-pref from it; enable
-`neighbor ... send-community`. (Stretch: have r1 *set* a community on 192.0.2.0/24 outbound.)
-**Verify:**
+**Your task:** on r1, match community 65100:120 on routes from ISP-A and give those routes
+**local-pref 80**. Keep local-pref 200 (Task 2) for everything else from ISP-A.
+(Stretch: have r1 *set* a community of its own on 192.0.2.0/24 outbound.)
+
+**Predict:** with ISP-A's copy of 8.8.8.0/24 at local-pref 80 and ISP-B's copy (via r2) at the default 100,
+which exit does r1 now use for 8.8.8.0/24? And for 100.64.0.0/24, which only ISP-A sends untagged?
+**Verify on r1:**
 ```
-show ip bgp 8.8.8.0/24          # look for the Community line
-show bgp community              # all community-tagged routes
+show ip bgp 8.8.8.0/24              # look for "Community: 65100:120" and the localpref
+show bgp community 65100:120        # every route carrying that tag
+show ip bgp 100.64.0.0/24           # untagged -> still localpref 200
 ```
-> Hint: `bgp community-list`, then a route-map matching it. `set community 65000:100 additive` to tag.
-> Interview line: "communities are route tags — I tag at ingress and act on them anywhere in my AS,
-> which is how ISPs offer customers self-service traffic engineering."
+> Hint: `bgp community-list standard ... permit 65100:120`, then a lower-numbered sequence in the existing
+> `FROM_ISPA` route-map that matches it. FRR sends communities to every neighbour by default
+> (`send-community` is enabled), so r3's tag reaches r1 and r1 passes it on to r2 without extra config.
+
+✅ Done when on r1 `show ip bgp 8.8.8.0/24` shows the ISP-A path with **Community 65100:120** and
+**localpref 80**, the best path (`>`) is now the one via r2 (ISP-B), and 100.64.0.0/24 still has localpref 200.
+
+> **Summary:** communities are route tags — set at ingress, matched anywhere in the AS. That is how ISPs
+> offer customers self-service traffic engineering.
 
 ---
 
-# TASK 5 — Don't become a transit AS (the filter that saves your job)
+# TASK 5 — Don't become a transit AS (the most important edge filter)
 Right now, are you re-advertising ISP-A's routes to ISP-B? If so, you're offering **free transit** —
 the internet could route through your little AS. A multihomed customer must announce **only its own
 prefixes** outbound.
@@ -137,14 +149,14 @@ sudo docker exec clab-day2-te-r4 vtysh -c "show ip bgp"
 
 ---
 
-# Interview soundbites to lock in
-- *"Outbound I steer with local-pref (AS-wide, higher wins); inbound I steer with AS-path prepend, and
-  MED only between links to the same neighbour AS."*
-- *"Best path is weight, local-pref, locally-originated, AS-path, origin, MED, eBGP-over-iBGP, then IGP
-  metric and router-id."*
-- *"As a multihomed customer I filter outbound to my own prefixes only — otherwise I'd be unintentional
-  transit between my two upstreams."*
-- *"Communities are tags: set once at ingress, match anywhere — the basis of ISP self-service TE menus."*
+# Key points
+- Outbound traffic is steered with local-pref (AS-wide, higher wins); inbound with AS-path prepend.
+  MED only decides between links to the same neighbour AS.
+- Best path: weight, local-pref, locally-originated, AS-path, origin, MED, eBGP-over-iBGP, then IGP
+  metric and router-id.
+- A multihomed customer filters outbound to its own prefixes only — otherwise it becomes unintentional
+  transit between its two upstreams.
+- Communities are tags: set once at ingress, match anywhere — the basis of ISP self-service TE menus.
 
 ---
 ---
@@ -214,12 +226,13 @@ route-map FROM_ISPA permit 5
 route-map FROM_ISPA permit 10
  set local-preference 200
 exit
-router bgp 65000
- neighbor 10.0.13.2 send-community
 end
 clear ip bgp * soft
 ```
-(Set a community outbound: `route-map ... permit 10 / set community 65000:100 additive`.)
+`FROM_ISPA` is already applied inbound on 10.0.13.2 from Task 2, so only the new sequence 5 is needed.
+8.8.8.0/24 from ISP-A now has localpref 80, so r2's ISP-B copy (localpref 100) wins and r1 exits via r2 for it.
+100.64.0.0/24 is untagged, falls through to sequence 10 and keeps localpref 200.
+(Set a community outbound: add `set community 65000:100 additive` to the route-map you apply `out`.)
 
 ### Task 5 (on BOTH r1 and r2)
 ```
